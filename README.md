@@ -33,7 +33,41 @@ working unchanged. Only these 3 are new:
 | `BACKUP_RETENTION_DAYS` | `7` | Backups older than this many days are deleted automatically. |
 | `BACKUP_DATABASES` | (empty = auto) | Comma-separated `.fdb` files to back up. Empty = all `*.fdb` in `/firebird/data`. |
 | `BACKUP_USER` | `SYSDBA` | Firebird user used by `gbak`. |
+| `BACKUP_ROLE` | `RDB$ADMIN` | Firebird role passed to `gbak`; grant it to `BACKUP_USER` on each database. |
 | `BACKUP_PASSWORD` | (empty = auto) | Password for `BACKUP_USER`. Empty = use `ISC_PASSWD`/`ISC_PASSWORD` from `/firebird/etc/SYSDBA.password`. |
+
+### Grant backup role
+
+`BACKUP_USER` must have the `RDB$ADMIN` role on every database being backed up.
+Run this once per database using `SYSDBA` or the database owner:
+
+```bash
+docker exec -it firebird25 /usr/local/firebird/bin/isql \
+  /firebird/data/mydb.fdb \
+  -user SYSDBA
+```
+
+Then execute in the `SQL>` prompt:
+
+```sql
+GRANT RDB$ADMIN TO <backup-user>;
+COMMIT;
+QUIT;
+```
+
+Set `BACKUP_USER` and its password securely through your deployment environment
+or secret manager (do not commit the password to this repository):
+
+```env
+BACKUP_USER=<backup-user>
+BACKUP_PASSWORD=<backup-password>
+BACKUP_ROLE=RDB$ADMIN
+BACKUP_DATABASES=mydb.fdb
+```
+
+The role grant is stored in the target database file, not in `security2.fdb`.
+`security2.fdb` stores the user and password. `RDB$ADMIN` is an administrative
+role, so a dedicated backup user is recommended instead of an application user.
 
 ## Volume
 

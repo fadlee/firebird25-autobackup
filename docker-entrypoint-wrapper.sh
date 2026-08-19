@@ -12,6 +12,7 @@ log() { echo "[backup-wrapper] $(date '+%Y-%m-%d %H:%M:%S') $*"; }
 cat > "$ENV_FILE" <<EOF
 BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
 BACKUP_DATABASES=${BACKUP_DATABASES:-}
+BACKUP_ROLE=${BACKUP_ROLE:-RDB\$ADMIN}
 # export supaya kelihatan subproses (date di log()/nama file) — source biasa
 # cuma bikin shell var non-export, dan shell cron tidak mewarisi TZ container
 export TZ=${TZ:-UTC}
@@ -30,7 +31,7 @@ if [ -n "${BACKUP_PASSWORD:-}" ]; then
 else
     BACKUP_PASSWORD_STATUS=dari-SYSDBA.password
 fi
-log "Env backup (ubah via environment): BACKUP_CRON='${BACKUP_CRON:-0 2 * * *}' (jadwal) | BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7} (hari) | BACKUP_DATABASES='${BACKUP_DATABASES:-}' (kosong=semua *.fdb) | BACKUP_USER='${BACKUP_USER:-SYSDBA}' | BACKUP_PASSWORD=${BACKUP_PASSWORD_STATUS} | TZ='${TZ:-UTC}'"
+log "Env backup (ubah via environment): BACKUP_CRON='${BACKUP_CRON:-0 2 * * *}' (jadwal) | BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7} (hari) | BACKUP_DATABASES='${BACKUP_DATABASES:-}' (kosong=semua *.fdb) | BACKUP_USER='${BACKUP_USER:-SYSDBA}' | BACKUP_ROLE='${BACKUP_ROLE:-RDB\$ADMIN}' | BACKUP_PASSWORD=${BACKUP_PASSWORD_STATUS} | TZ='${TZ:-UTC}'"
 
 cron
 

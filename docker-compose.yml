@@ -14,6 +14,7 @@ services:
       BACKUP_RETENTION_DAYS: "7"
       BACKUP_DATABASES: ""                       # kosong = auto-discover semua *.fdb
       BACKUP_USER: "SYSDBA"                       # user Firebird untuk gbak
+      BACKUP_ROLE: 'RDB$$ADMIN'                  # role untuk hak backup
       BACKUP_PASSWORD: ""                         # kosong = gunakan password dari SYSDBA.password
     volumes:
       - firebird_data:/firebird
