@@ -26,6 +26,7 @@ ENV BACKUP_CRON="0 2 * * *" \
 RUN mkdir -p /firebird/backups
 
 # Wrapper ini yang jalan duluan: pasang cron job backup, lalu lanjut ke
-# entrypoint asli image jacobalberty (dengan argumen/CMD yang sama persis).
+# entrypoint asli image jacobalberty. CMD tidak di-set di sini sehingga
+# diwarisi dari base image (["/usr/local/firebird/bin/fbguard"]) dan argumen
+# yang masuk diteruskan apa adanya.
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint-wrapper.sh"]
-CMD ["firebird"]
