@@ -23,6 +23,7 @@ touch "${LOG_DIR}/firebird-backup.log"
 echo "${BACKUP_CRON:-0 2 * * *} root /usr/local/bin/backup.sh >> ${LOG_DIR}/firebird-backup.log 2>&1" > "$CRON_FILE"
 chmod 0644 "$CRON_FILE"
 log "Jadwal auto-backup: ${BACKUP_CRON:-0 2 * * *} (retensi ${BACKUP_RETENTION_DAYS:-7} hari)"
+log "Env backup (ubah via environment): BACKUP_CRON='${BACKUP_CRON:-0 2 * * *}' (jadwal) | BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7} (hari) | BACKUP_DATABASES='${BACKUP_DATABASES:-}' (kosong=semua *.fdb) | TZ='${TZ:-UTC}'"
 
 cron
 
