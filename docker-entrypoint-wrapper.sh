@@ -16,6 +16,8 @@ BACKUP_DATABASES=${BACKUP_DATABASES:-}
 # cuma bikin shell var non-export, dan shell cron tidak mewarisi TZ container
 export TZ=${TZ:-UTC}
 EOF
+# Kredensial backup ditulis shell-escaped; password tidak pernah ditampilkan di log.
+printf 'BACKUP_USER=%q\nBACKUP_PASSWORD=%q\n' "${BACKUP_USER:-}" "${BACKUP_PASSWORD:-}" >> "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
 # --- Pasang jadwal cron -------------------------------------------------------
@@ -23,7 +25,12 @@ touch "${LOG_DIR}/firebird-backup.log"
 echo "${BACKUP_CRON:-0 2 * * *} root /usr/local/bin/backup.sh >> ${LOG_DIR}/firebird-backup.log 2>&1" > "$CRON_FILE"
 chmod 0644 "$CRON_FILE"
 log "Jadwal auto-backup: ${BACKUP_CRON:-0 2 * * *} (retensi ${BACKUP_RETENTION_DAYS:-7} hari)"
-log "Env backup (ubah via environment): BACKUP_CRON='${BACKUP_CRON:-0 2 * * *}' (jadwal) | BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7} (hari) | BACKUP_DATABASES='${BACKUP_DATABASES:-}' (kosong=semua *.fdb) | TZ='${TZ:-UTC}'"
+if [ -n "${BACKUP_PASSWORD:-}" ]; then
+    BACKUP_PASSWORD_STATUS=diset
+else
+    BACKUP_PASSWORD_STATUS=dari-SYSDBA.password
+fi
+log "Env backup (ubah via environment): BACKUP_CRON='${BACKUP_CRON:-0 2 * * *}' (jadwal) | BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7} (hari) | BACKUP_DATABASES='${BACKUP_DATABASES:-}' (kosong=semua *.fdb) | BACKUP_USER='${BACKUP_USER:-SYSDBA}' | BACKUP_PASSWORD=${BACKUP_PASSWORD_STATUS} | TZ='${TZ:-UTC}'"
 
 cron
 
@@ -32,7 +39,9 @@ cron
 if [ -f /firebird/system/security2.fdb ] && [ ! -f /firebird/etc/firebird.conf ]; then
     log "Volume Firebird tidak lengkap: melengkapi konfigurasi dari skeleton"
     mkdir -p /firebird/etc
-    cp -n /usr/local/firebird/skel/etc/* /firebird/etc/
+    for file in /usr/local/firebird/skel/etc/*; do
+        [ "$(basename "$file")" = SYSDBA.password ] || cp -n "$file" /firebird/etc/
+    done
     if [ ! -f /firebird/etc/SYSDBA.password ]; then
         if [ -z "${ISC_PASSWORD:-}" ]; then
             log "GAGAL: ISC_PASSWORD wajib diisi untuk melengkapi volume lama"

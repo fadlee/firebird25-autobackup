@@ -20,6 +20,8 @@ else
 fi
 
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
+BACKUP_USER="${BACKUP_USER:-${ISC_USER:-sysdba}}"
+DB_PASSWORD="${BACKUP_PASSWORD:-${ISC_PASSWD:-${ISC_PASSWORD:-}}}"
 TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
 
 log() { echo "[backup] $(date '+%Y-%m-%d %H:%M:%S') $*"; }
@@ -54,7 +56,12 @@ for DB_NAME in "${DB_LIST[@]}"; do
     fi
 
     log "Backup $DB_PATH -> $OUT_FILE"
-    if "${PREFIX}/bin/gbak" -b -user "${ISC_USER:-sysdba}" -password "${ISC_PASSWORD}" \
+    if [ -z "$DB_PASSWORD" ]; then
+        log "GAGAL backup $DB_NAME: password untuk user $BACKUP_USER tidak ditemukan (set BACKUP_PASSWORD atau cek $PASSWORD_FILE)"
+        FAILED=1
+        continue
+    fi
+    if "${PREFIX}/bin/gbak" -b -user "$BACKUP_USER" -password "$DB_PASSWORD" \
         -garbage_collect -ignore -verbose "$DB_PATH" "$OUT_FILE" \
         > "${BACKUP_DIR}/${BASE_NAME}_${TIMESTAMP}.log" 2>&1; then
         gzip -f "$OUT_FILE"

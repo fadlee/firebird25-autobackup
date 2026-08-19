@@ -32,6 +32,8 @@ working unchanged. Only these 3 are new:
 | `BACKUP_CRON` | `0 2 * * *` | Cron schedule for backups. |
 | `BACKUP_RETENTION_DAYS` | `7` | Backups older than this many days are deleted automatically. |
 | `BACKUP_DATABASES` | (empty = auto) | Comma-separated `.fdb` files to back up. Empty = all `*.fdb` in `/firebird/data`. |
+| `BACKUP_USER` | `SYSDBA` | Firebird user used by `gbak`. |
+| `BACKUP_PASSWORD` | (empty = auto) | Password for `BACKUP_USER`. Empty = use `ISC_PASSWD`/`ISC_PASSWORD` from `/firebird/etc/SYSDBA.password`. |
 
 ## Volume
 

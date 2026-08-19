@@ -13,6 +13,8 @@ services:
       BACKUP_CRON: "0 */6 * * *"                 # tiap 6 jam (00:00, 06:00, 12:00, 18:00)
       BACKUP_RETENTION_DAYS: "7"
       BACKUP_DATABASES: ""                       # kosong = auto-discover semua *.fdb
+      BACKUP_USER: "SYSDBA"                       # user Firebird untuk gbak
+      BACKUP_PASSWORD: ""                         # kosong = gunakan password dari SYSDBA.password
     volumes:
       - firebird_data:/firebird
 

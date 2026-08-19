@@ -19,7 +19,8 @@ RUN chmod +x /usr/local/bin/backup.sh /usr/local/bin/docker-entrypoint-wrapper.s
 
 ENV BACKUP_CRON="0 2 * * *" \
     BACKUP_RETENTION_DAYS=7 \
-    BACKUP_DATABASES=
+    BACKUP_DATABASES= \
+    BACKUP_USER=
 
 # Pastikan folder backup ada di dalam volume /firebird yang sudah ada,
 # jadi tidak perlu volume tambahan - cukup mount /firebird seperti biasa.
