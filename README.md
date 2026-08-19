@@ -1,43 +1,44 @@
-# Auto-backup wrapper untuk jacobalberty/firebird:v2.5.9-ss
+# Auto-backup wrapper for jacobalberty/firebird:v2.5.9-ss
 
-Ini **bukan** image Firebird baru — ini cuma nempelin cron + `gbak` backup di
-atas image `jacobalberty/firebird:v2.5.9-ss` yang biasa kamu pakai. Semua
-perilaku image aslinya (setup SYSDBA, auto-create database, auto-restore dari
-`/firebird/restore`, dst) tetap jalan persis sama seperti biasa — entrypoint
-asli tidak diubah, cuma dibungkus.
+This is **not** a new Firebird image — it just layers cron + `gbak` backups on
+top of the `jacobalberty/firebird:v2.5.9-ss` image you already use. All the
+original image's behavior (SYSDBA setup, auto-create database, auto-restore
+from `/firebird/restore`, etc.) works exactly as before — the original
+entrypoint is untouched, only wrapped.
 
-## Isi
+## Contents
 
-- `Dockerfile` — `FROM jacobalberty/firebird:v2.5.9-ss`, tambah `cron` + `gzip`.
-- `docker-entrypoint-wrapper.sh` — pasang jadwal cron dulu, baru `exec` ke
-  `/usr/local/firebird/docker-entrypoint.sh` (entrypoint asli image).
-- `backup.sh` — jalanin `gbak -b` (logical/hot backup), pakai kredensial
-  SYSDBA yang sama dengan yang di-generate/di-set image aslinya
-  (`/firebird/etc/SYSDBA.password`), hasil di-gzip + rotasi otomatis.
-- `docker-compose.yml` — contoh pakai.
+- `Dockerfile` — `FROM jacobalberty/firebird:v2.5.9-ss`, adds `cron` + `gzip`.
+- `docker-entrypoint-wrapper.sh` — installs the cron schedule first, then
+  `exec`s into `/usr/local/firebird/docker-entrypoint.sh` (the image's
+  original entrypoint).
+- `backup.sh` — runs `gbak -b` (logical/hot backup) using the same SYSDBA
+  credentials the original image generates/sets
+  (`/firebird/etc/SYSDBA.password`), gzips the output, rotates old backups.
+- `docker-compose.yml` — usage example.
 
-## Cara pakai
+## Usage
 
 ```bash
 docker compose up -d --build
 ```
 
-Env var yang **sama seperti biasa** kamu pakai untuk image jacobalberty
-(`ISC_PASSWORD`, `FIREBIRD_DATABASE`, `FIREBIRD_USER`, `TZ`, dst) tetap
-berlaku semua, tidak berubah. Yang baru cuma 3 ini:
+All the env vars you normally use with the jacobalberty image
+(`ISC_PASSWORD`, `FIREBIRD_DATABASE`, `FIREBIRD_USER`, `TZ`, etc.) keep
+working unchanged. Only these 3 are new:
 
-| Variable | Default | Keterangan |
+| Variable | Default | Description |
 |---|---|---|
-| `BACKUP_CRON` | `0 2 * * *` | Jadwal cron backup. |
-| `BACKUP_RETENTION_DAYS` | `7` | Backup lebih tua dari sekian hari otomatis dihapus. |
-| `BACKUP_DATABASES` | (kosong = auto) | Nama file `.fdb` yang di-backup, pisah koma. Kosong = semua `*.fdb` di `/firebird/data`. |
+| `BACKUP_CRON` | `0 2 * * *` | Cron schedule for backups. |
+| `BACKUP_RETENTION_DAYS` | `7` | Backups older than this many days are deleted automatically. |
+| `BACKUP_DATABASES` | (empty = auto) | Comma-separated `.fdb` files to back up. Empty = all `*.fdb` in `/firebird/data`. |
 
 ## Volume
 
-Tetap satu volume `/firebird` seperti image aslinya — backup otomatis
-ditaruh di subfolder baru `/firebird/backups`, tidak perlu volume tambahan.
+Still a single `/firebird` volume, like the original image — backups go into
+the new `/firebird/backups` subfolder, no extra volume needed.
 
-## Backup manual / cek status
+## Manual backup / check status
 
 ```bash
 docker exec firebird25 /usr/local/bin/backup.sh
@@ -46,20 +47,20 @@ docker exec firebird25 tail -f /var/log/firebird-backup.log
 
 ## Restore
 
-Sama seperti biasa pakai `gbak -c`, atau taruh file `.fbk` (bukan `.gz`) di
-`/firebird/restore` — fitur auto-restore bawaan image jacobalberty akan
-otomatis restore ke `/firebird/data` saat container start (kalau `.fdb` yang
-sepadan belum ada):
+Same as usual with `gbak -c`, or drop a `.fbk` file (not `.gz`) into
+`/firebird/restore` — the jacobalberty image's built-in auto-restore will
+restore it into `/firebird/data` on container start (if the matching `.fdb`
+doesn't exist yet):
 
 ```bash
-# dari luar container: unzip dulu hasil backup
+# from outside the container: unzip the backup first
 gunzip -k mydb_20260819_020000.fbk.gz
 
 docker cp mydb_20260819_020000.fbk firebird25:/firebird/restore/
 docker restart firebird25
 ```
 
-Atau restore manual ke nama file lain tanpa restart:
+Or restore manually to a different file name without restarting:
 
 ```bash
 docker exec -it firebird25 bash
@@ -69,12 +70,12 @@ gbak -c -user "$ISC_USER" -password "$ISC_PASSWORD" \
   /firebird/data/mydb_restored.fdb
 ```
 
-## Catatan
+## Notes
 
-- Backup pakai `gbak -b` (logical backup) — aman dijalankan sambil server
-  tetap online, tidak perlu shutdown/lock database.
-- Kalau nanti butuh backup incremental (`nbackup`) untuk database besar,
-  tinggal bilang, saya buatkan variannya.
-- Pastikan volume `/firebird` (termasuk subfolder `backups`) ikut di-backup
-  di level infrastruktur juga (snapshot VPS dll) — ini melindungi dari
-  corruption database, bukan dari hilangnya seluruh volume/disk.
+- Backup uses `gbak -b` (logical backup) — safe to run while the server is
+  online, no shutdown or database lock needed.
+- If you later need incremental backup (`nbackup`) for large databases, just
+  ask and I'll add a variant.
+- Make sure the `/firebird` volume (including the `backups` subfolder) is also
+  backed up at the infrastructure level (VPS snapshots, etc.) — this protects
+  against database corruption, not against losing the whole volume/disk.
