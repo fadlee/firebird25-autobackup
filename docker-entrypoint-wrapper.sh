@@ -26,6 +26,26 @@ log "Jadwal auto-backup: ${BACKUP_CRON:-0 2 * * *} (retensi ${BACKUP_RETENTION_D
 
 cron
 
+# Volume lama bisa hanya berisi security2.fdb. Entrypoint upstream lalu
+# melewati init, padahal config/password belum ada.
+if [ -f /firebird/system/security2.fdb ] && [ ! -f /firebird/etc/firebird.conf ]; then
+    log "Volume Firebird tidak lengkap: melengkapi konfigurasi dari skeleton"
+    mkdir -p /firebird/etc
+    cp -n /usr/local/firebird/skel/etc/* /firebird/etc/
+    if [ ! -f /firebird/etc/SYSDBA.password ]; then
+        if [ -z "${ISC_PASSWORD:-}" ]; then
+            log "GAGAL: ISC_PASSWORD wajib diisi untuk melengkapi volume lama"
+            exit 1
+        fi
+        printf 'ISC_USER=SYSDBA\nISC_PASSWD=%s\nISC_PASSWORD=%s\n' \
+            "$ISC_PASSWORD" "$ISC_PASSWORD" > /firebird/etc/SYSDBA.password
+        chmod 400 /firebird/etc/SYSDBA.password
+    fi
+fi
+
+# Volume lama juga dapat berisi pidfile stale dari container sebelumnya.
+rm -f /var/run/firebird/firebird.pid
+
 # --- Lanjut ke entrypoint asli image jacobalberty/firebird -------------------
 # Ini yang menjalankan setup SYSDBA, create database, restore dari
 # /firebird/restore, dan start fbguard/fbserver seperti biasa. Argumen
