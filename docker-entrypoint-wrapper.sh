@@ -1,0 +1,30 @@
+#!/bin/bash
+set -euo pipefail
+
+ENV_FILE=/etc/firebird-backup.env
+LOG_DIR=/var/log
+CRON_FILE=/etc/cron.d/firebird-backup
+
+log() { echo "[backup-wrapper] $(date '+%Y-%m-%d %H:%M:%S') $*"; }
+
+# --- Tulis konfigurasi backup ke file, supaya bisa dibaca cron job -----------
+# (proses cron tidak mewarisi environment variable container secara otomatis)
+cat > "$ENV_FILE" <<EOF
+BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+BACKUP_DATABASES=${BACKUP_DATABASES:-}
+EOF
+chmod 600 "$ENV_FILE"
+
+# --- Pasang jadwal cron -------------------------------------------------------
+touch "${LOG_DIR}/firebird-backup.log"
+echo "${BACKUP_CRON:-0 2 * * *} root /usr/local/bin/backup.sh >> ${LOG_DIR}/firebird-backup.log 2>&1" > "$CRON_FILE"
+chmod 0644 "$CRON_FILE"
+log "Jadwal auto-backup: ${BACKUP_CRON:-0 2 * * *} (retensi ${BACKUP_RETENTION_DAYS:-7} hari)"
+
+cron
+
+# --- Lanjut ke entrypoint asli image jacobalberty/firebird -------------------
+# Ini yang menjalankan setup SYSDBA, create database, restore dari
+# /firebird/restore, dan start fbguard/fbserver seperti biasa. Argumen
+# (CMD) diteruskan apa adanya.
+exec /usr/local/firebird/docker-entrypoint.sh "$@"

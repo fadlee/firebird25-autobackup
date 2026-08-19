@@ -1,0 +1,20 @@
+services:
+  firebird:
+    build: .
+    # atau kalau sudah di-push: image: youruser/firebird25-autobackup:latest
+    container_name: firebird25
+    restart: unless-stopped
+    ports:
+      - "3050:3050"
+    environment:
+      ISC_PASSWORD: "ganti-password-yang-kuat"   # sama seperti biasanya dipakai di image jacobalberty
+      FIREBIRD_DATABASE: "mydb.fdb"              # opsional
+      TZ: "Asia/Jakarta"
+      BACKUP_CRON: "0 */6 * * *"                 # tiap 6 jam (00:00, 06:00, 12:00, 18:00)
+      BACKUP_RETENTION_DAYS: "7"
+      BACKUP_DATABASES: ""                       # kosong = auto-discover semua *.fdb
+    volumes:
+      - firebird_data:/firebird
+
+volumes:
+  firebird_data:
