@@ -26,7 +26,12 @@ ENV BACKUP_CRON="0 2 * * *" \
 RUN mkdir -p /firebird/backups
 
 # Wrapper ini yang jalan duluan: pasang cron job backup, lalu lanjut ke
-# entrypoint asli image jacobalberty. CMD tidak di-set di sini sehingga
-# diwarisi dari base image (["/usr/local/firebird/bin/fbguard"]) dan argumen
-# yang masuk diteruskan apa adanya.
+# entrypoint asli image jacobalberty. CMD harus di-set ulang eksplisit:
+# mendeklarasikan ENTRYPOINT di Dockerfile anak menghapus CMD warisan dari
+# base image (jadinya null), padahal entrypoint asli menutup dengan
+# `fbkill; $@` — tanpa CMD, fbguard tidak pernah dijalankan ulang di foreground.
+#
+# catatan: ini hardcode cmd base image; kalau image jacobalberty ganti cmd,
+# sesuaikan di sini.
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint-wrapper.sh"]
+CMD ["/usr/local/firebird/bin/fbguard"]

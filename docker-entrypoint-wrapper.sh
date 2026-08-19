@@ -12,6 +12,9 @@ log() { echo "[backup-wrapper] $(date '+%Y-%m-%d %H:%M:%S') $*"; }
 cat > "$ENV_FILE" <<EOF
 BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
 BACKUP_DATABASES=${BACKUP_DATABASES:-}
+# export supaya kelihatan subproses (date di log()/nama file) — source biasa
+# cuma bikin shell var non-export, dan shell cron tidak mewarisi TZ container
+export TZ=${TZ:-UTC}
 EOF
 chmod 600 "$ENV_FILE"
 
