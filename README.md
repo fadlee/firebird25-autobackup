@@ -36,24 +36,47 @@ working unchanged. Only these 3 are new:
 | `BACKUP_ROLE` | `RDB$ADMIN` | Firebird role passed to `gbak`; grant it to `BACKUP_USER` on each database. |
 | `BACKUP_PASSWORD` | (empty = auto) | Password for `BACKUP_USER`. Empty = use `ISC_PASSWD`/`ISC_PASSWORD` from `/firebird/etc/SYSDBA.password`. |
 
-### Grant backup role
+### Grant backup role with `isql`
 
 `BACKUP_USER` must have the `RDB$ADMIN` role on every database being backed up.
-Run this once per database using `SYSDBA` or the database owner:
+This is a SQL grant stored in the target `.fdb`/`.BJDB` database, so use the
+Firebird `isql` binary—not `gsec`—to grant it. Run this once per database using
+`SYSDBA` or the database owner.
+
+For Docker Swarm, first find the running container:
 
 ```bash
-docker exec -it firebird25 /usr/local/firebird/bin/isql \
-  /firebird/data/mydb.fdb \
-  -user SYSDBA
+CID=$(docker ps -q \
+  --filter label=com.docker.swarm.service.name=dev_firebird \
+  | head -1)
+echo "$CID"
 ```
 
-Then execute in the `SQL>` prompt:
+Open a shell and load the generated SYSDBA credentials:
+
+```bash
+docker exec -it "$CID" bash
+source /firebird/etc/SYSDBA.password
+/usr/local/firebird/bin/isql \
+  /firebird/data/mydb.BJDB \
+  -user "$ISC_USER" \
+  -password "$ISC_PASSWD"
+```
+
+At the `SQL>` prompt, grant the role and commit it:
 
 ```sql
 GRANT RDB$ADMIN TO <backup-user>;
 COMMIT;
 QUIT;
 ```
+
+Replace `mydb.BJDB` and `<backup-user>` with the actual values. If
+`SYSDBA.password` contains an old password, replace `$ISC_USER` and
+`$ISC_PASSWD` with known-valid SYSDBA credentials. Verify the grant by running
+`SHOW GRANTS;` in `isql` before `QUIT`. On Firebird 2.5, if `SHOW GRANTS`
+is not supported by the client, the successful `GRANT` followed by `COMMIT` is
+sufficient.
 
 Set `BACKUP_USER` and its password securely through your deployment environment
 or secret manager (do not commit the password to this repository):
