@@ -9,14 +9,12 @@ log() { echo "[backup-wrapper] $(date '+%Y-%m-%d %H:%M:%S') $*"; }
 
 # --- Tulis konfigurasi backup ke file, supaya bisa dibaca cron job -----------
 # (proses cron tidak mewarisi environment variable container secara otomatis)
-cat > "$ENV_FILE" <<EOF
-BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
-BACKUP_DATABASES=${BACKUP_DATABASES:-}
-BACKUP_ROLE=${BACKUP_ROLE:-RDB\$ADMIN}
-# export supaya kelihatan subproses (date di log()/nama file) — source biasa
-# cuma bikin shell var non-export, dan shell cron tidak mewarisi TZ container
-export TZ=${TZ:-UTC}
-EOF
+# %q mencegah nilai seperti RDB$ADMIN diekspansi lagi saat file di-source.
+printf 'BACKUP_RETENTION_DAYS=%q\nBACKUP_DATABASES=%q\nBACKUP_ROLE=%q\nexport TZ=%q\n' \
+    "${BACKUP_RETENTION_DAYS:-7}" \
+    "${BACKUP_DATABASES:-}" \
+    "${BACKUP_ROLE:-RDB\$ADMIN}" \
+    "${TZ:-UTC}" > "$ENV_FILE"
 # Kredensial backup ditulis shell-escaped; password tidak pernah ditampilkan di log.
 printf 'BACKUP_USER=%q\nBACKUP_PASSWORD=%q\n' "${BACKUP_USER:-}" "${BACKUP_PASSWORD:-}" >> "$ENV_FILE"
 chmod 600 "$ENV_FILE"
